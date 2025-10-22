@@ -1,13 +1,13 @@
 {
   "name": "khanh-mcp",
   "version": "1.0.0",
-  "main": "build/server/index.js",
+  "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch server/index.ts",
     "bundle:widgets": "bash scripts/bundle-widgets.sh",
-    "build": "npm run bundle:widgets && tsc -p tsconfig.json",
-    "start": "node build/server/index.js",
+    "build": "npm run bundle:widgets && tsc -p tsconfig.json && echo '✅ Build completed. Files:' && ls -la build/server/",
+    "start": "echo 'Starting from:' && pwd && echo 'Looking for:' && ls -la build/server/ && node build/server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
