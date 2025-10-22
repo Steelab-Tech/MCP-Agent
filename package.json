@@ -1,0 +1,33 @@
+{
+  "name": "khanh-mcp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "bundle:widgets": "bash scripts/bundle-widgets.sh",
+    "build": "npm run bundle:widgets && tsc -p tsconfig.json",
+    "start": "node build/server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "MCP Server for ChatGPT Widget System - Affiliate Link & Lead Capture",
+  "dependencies": {
+    "@fractal-mcp/cli": "^2.1.5",
+    "@fractal-mcp/oai-hooks": "^2.1.5",
+    "@fractal-mcp/oai-server": "^2.1.5",
+    "@supabase/supabase-js": "^2.76.1",
+    "dotenv": "^17.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
