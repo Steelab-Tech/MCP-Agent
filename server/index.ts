@@ -30,6 +30,46 @@ function readWidgetHtml(filename: string): string {
   return fs.readFileSync(distPath, "utf-8");
 }
 
+// Helper to safely serialize objects (prevent circular refs and stack overflow)
+function safeSerialize(obj: any, maxDepth = 10): any {
+  const seen = new WeakSet();
+
+  function serialize(value: any, depth: number): any {
+    if (depth > maxDepth) {
+      return '[Max Depth Reached]';
+    }
+
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    if (typeof value !== 'object') {
+      return value;
+    }
+
+    if (seen.has(value)) {
+      return '[Circular Reference]';
+    }
+
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      return value.map(item => serialize(item, depth + 1));
+    }
+
+    const result: any = {};
+    for (const key in value) {
+      if (value.hasOwnProperty(key)) {
+        result[key] = serialize(value[key], depth + 1);
+      }
+    }
+
+    return result;
+  }
+
+  return serialize(obj, 0);
+}
+
 // Zod schemas for tool validation
 const selectBrandSchema = z.object({
   brandId: z.string().uuid().describe("The brand ID to select"),
@@ -494,11 +534,35 @@ function createServer() {
 // ============================================
 const port = parseInt(process.env.PORT || "8000", 10);
 
-startOpenAIWidgetHttpServer({
-  port,
-  serverFactory: createServer,
-});
+// Wrap server startup with error handling
+try {
+  const httpServer = startOpenAIWidgetHttpServer({
+    port,
+    serverFactory: createServer,
+  });
 
-console.log(`🚀 MCP Server started on port ${port}`);
-console.log(`📡 Ready to accept connections from ChatGPT`);
-console.log(`🔗 Server URL: http://localhost:${port}/mcp`);
+  console.log(`🚀 MCP Server started on port ${port}`);
+  console.log(`📡 Ready to accept connections from ChatGPT`);
+  console.log(`🔗 Server URL: http://localhost:${port}/mcp`);
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    httpServer?.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully...');
+    httpServer?.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+
+} catch (error) {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+}
