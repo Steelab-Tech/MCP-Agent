@@ -70,7 +70,7 @@ function createServer() {
       templateUri: "ui://widget/brand-list.html",
       invoking: "Đang tải danh sách thương hiệu...",
       invoked: "Danh sách thương hiệu đã được tải!",
-      html: "", // Will be dynamically generated
+      html: generateBrandListHTML([]), // Empty state, will be populated via structuredContent
       responseText: "Đây là danh sách các thương hiệu có sẵn.",
     },
     async () => {
