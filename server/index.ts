@@ -8,8 +8,12 @@ import {
 } from "@fractal-mcp/oai-server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import * as fs from "fs";
-import * as path from "path";
+import {
+  generateBrandListHTML,
+  generateProductListHTML,
+  generateProductDetailHTML,
+  generateLeadFormHTML,
+} from "./widgets";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -20,55 +24,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Helper to read widget HTML files
-function readWidgetHtml(filename: string): string {
-  const distPath = path.join(process.cwd(), "dist", filename);
-  if (!fs.existsSync(distPath)) {
-    throw new Error(`Widget HTML file not found: ${distPath}`);
-  }
-  return fs.readFileSync(distPath, "utf-8");
-}
-
-// Helper to safely serialize objects (prevent circular refs and stack overflow)
-function safeSerialize(obj: any, maxDepth = 10): any {
-  const seen = new WeakSet();
-
-  function serialize(value: any, depth: number): any {
-    if (depth > maxDepth) {
-      return '[Max Depth Reached]';
-    }
-
-    if (value === null || value === undefined) {
-      return value;
-    }
-
-    if (typeof value !== 'object') {
-      return value;
-    }
-
-    if (seen.has(value)) {
-      return '[Circular Reference]';
-    }
-
-    seen.add(value);
-
-    if (Array.isArray(value)) {
-      return value.map(item => serialize(item, depth + 1));
-    }
-
-    const result: any = {};
-    for (const key in value) {
-      if (value.hasOwnProperty(key)) {
-        result[key] = serialize(value[key], depth + 1);
-      }
-    }
-
-    return result;
-  }
-
-  return serialize(obj, 0);
-}
 
 // Zod schemas for tool validation
 const selectBrandSchema = z.object({
@@ -115,7 +70,7 @@ function createServer() {
       templateUri: "ui://widget/brand-list.html",
       invoking: "Đang tải danh sách thương hiệu...",
       invoked: "Danh sách thương hiệu đã được tải!",
-      html: readWidgetHtml("BrandList.html"),
+      html: "", // Will be dynamically generated
       responseText: "Đây là danh sách các thương hiệu có sẵn.",
     },
     async () => {
@@ -141,6 +96,9 @@ function createServer() {
           website_url: b.website_url,
         }));
 
+        // Generate lightweight HTML (5KB vs 387KB!)
+        const html = generateBrandListHTML(cleanBrands);
+
         return {
           content: [
             {
@@ -149,6 +107,7 @@ function createServer() {
             },
           ],
           structuredContent: { brands: cleanBrands },
+          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Failed to load brands:", error);
@@ -160,6 +119,7 @@ function createServer() {
             },
           ],
           structuredContent: { brands: [] },
+          html: generateBrandListHTML([]), // Empty state HTML
         };
       }
     }
@@ -177,7 +137,7 @@ function createServer() {
       templateUri: "ui://widget/product-list.html",
       invoking: "Đang tải sản phẩm...",
       invoked: "Danh sách sản phẩm đã được tải!",
-      html: readWidgetHtml("ProductList.html"),
+      html: "", // Will be dynamically generated
       responseText: "Đây là danh sách sản phẩm của thương hiệu đã chọn.",
       inputSchema: selectBrandSchema,
     },
@@ -213,6 +173,7 @@ function createServer() {
           slug: brand.slug,
           logo_url: brand.logo_url,
           description: brand.description,
+          website_url: brand.website_url,
         };
 
         const cleanProducts = (products || []).map(p => ({
@@ -224,6 +185,9 @@ function createServer() {
           base_price: p.base_price,
           currency: p.currency,
         }));
+
+        // Generate lightweight HTML (5KB vs 389KB!)
+        const html = generateProductListHTML(cleanProducts, cleanBrand);
 
         return {
           content: [
@@ -237,6 +201,7 @@ function createServer() {
             products: cleanProducts,
             brandName: brand.name,
           },
+          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Error selecting brand:", error);
@@ -265,7 +230,7 @@ function createServer() {
       templateUri: "ui://widget/product-detail.html",
       invoking: "Đang tải chi tiết sản phẩm...",
       invoked: "Chi tiết sản phẩm đã được tải!",
-      html: readWidgetHtml("ProductDetail.html"),
+      html: "", // Will be dynamically generated
       responseText: "Đây là thông tin chi tiết về sản phẩm.",
       inputSchema: selectProductSchema,
     },
@@ -285,7 +250,7 @@ function createServer() {
         // Fetch brand info
         const { data: brand } = await supabase
           .from("brands")
-          .select("name")
+          .select("*")
           .eq("id", product.brand_id)
           .single();
 
@@ -310,6 +275,15 @@ function createServer() {
           checkout_url: product.checkout_url,
         };
 
+        const cleanBrand = {
+          id: brand?.id,
+          name: brand?.name,
+          slug: brand?.slug,
+          logo_url: brand?.logo_url,
+          description: brand?.description,
+          website_url: brand?.website_url,
+        };
+
         const cleanVariants = (variants || []).map(v => ({
           id: v.id,
           name: v.name,
@@ -319,6 +293,9 @@ function createServer() {
           stock_status: v.stock_status,
           attributes: v.attributes,
         }));
+
+        // Generate lightweight HTML (8KB vs 392KB!)
+        const html = generateProductDetailHTML(cleanProduct, cleanVariants, cleanBrand);
 
         return {
           content: [
@@ -332,6 +309,7 @@ function createServer() {
             variants: cleanVariants,
             brandName: brand?.name,
           },
+          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Error selecting product:", error);
@@ -360,7 +338,7 @@ function createServer() {
       templateUri: "ui://widget/lead-form.html",
       invoking: "Đang chuẩn bị form...",
       invoked: "Form đã sẵn sàng!",
-      html: readWidgetHtml("LeadForm.html"),
+      html: "", // Will be dynamically generated
       responseText: "Vui lòng điền thông tin để nhận tư vấn miễn phí.",
       inputSchema: showLeadFormSchema,
     },
@@ -374,15 +352,18 @@ function createServer() {
           .single();
 
         // Fetch product info if provided
-        let productName;
+        let product;
         if (args.productId) {
-          const { data: product } = await supabase
+          const { data: productData } = await supabase
             .from("products")
-            .select("name")
+            .select("*")
             .eq("id", args.productId)
             .single();
-          productName = product?.name;
+          product = productData;
         }
+
+        // Generate lightweight HTML (6KB vs 447KB!)
+        const html = generateLeadFormHTML(product);
 
         return {
           content: [
@@ -395,9 +376,10 @@ function createServer() {
             brandId: args.brandId,
             brandName: brand?.name,
             productId: args.productId,
-            productName,
+            productName: product?.name,
             variantId: args.variantId,
           },
+          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Error showing lead form:", error);
@@ -409,6 +391,7 @@ function createServer() {
             },
           ],
           structuredContent: {},
+          html: generateLeadFormHTML(), // Generic form
         };
       }
     }
