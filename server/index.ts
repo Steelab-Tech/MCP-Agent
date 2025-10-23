@@ -545,22 +545,28 @@ try {
   console.log(`📡 Ready to accept connections from ChatGPT`);
   console.log(`🔗 Server URL: http://localhost:${port}/mcp`);
 
-  // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully...');
-    httpServer?.close(() => {
-      console.log('Server closed');
-      process.exit(0);
-    });
+  // Prevent process from exiting on unhandled rejections (SDK bug workaround)
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit - SDK close() bug causes unhandled rejections
   });
 
-  process.on('SIGINT', () => {
-    console.log('SIGINT received, shutting down gracefully...');
-    httpServer?.close(() => {
-      console.log('Server closed');
-      process.exit(0);
-    });
-  });
+  // Graceful shutdown - DISABLED due to SDK close() bug causing infinite loop
+  // process.on('SIGTERM', () => {
+  //   console.log('SIGTERM received, shutting down gracefully...');
+  //   httpServer?.close(() => {
+  //     console.log('Server closed');
+  //     process.exit(0);
+  //   });
+  // });
+
+  // process.on('SIGINT', () => {
+  //   console.log('SIGINT received, shutting down gracefully...');
+  //   httpServer?.close(() => {
+  //     console.log('Server closed');
+  //     process.exit(0);
+  //   });
+  // });
 
 } catch (error) {
   console.error('Failed to start server:', error);
