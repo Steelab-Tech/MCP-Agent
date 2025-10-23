@@ -91,6 +91,16 @@ function createServer() {
           throw error;
         }
 
+        // Clean data to reduce payload size
+        const cleanBrands = (brands || []).map(b => ({
+          id: b.id,
+          name: b.name,
+          slug: b.slug,
+          logo_url: b.logo_url,
+          description: b.description,
+          website_url: b.website_url,
+        }));
+
         return {
           content: [
             {
@@ -98,7 +108,7 @@ function createServer() {
               text: `Tìm thấy ${brands?.length || 0} thương hiệu đang hoạt động.`,
             },
           ],
-          structuredContent: { brands: brands || [] },
+          structuredContent: { brands: cleanBrands },
         };
       } catch (error) {
         console.error("Failed to load brands:", error);
@@ -156,6 +166,25 @@ function createServer() {
           throw productsError;
         }
 
+        // Clean data to prevent circular refs and reduce payload size
+        const cleanBrand = {
+          id: brand.id,
+          name: brand.name,
+          slug: brand.slug,
+          logo_url: brand.logo_url,
+          description: brand.description,
+        };
+
+        const cleanProducts = (products || []).map(p => ({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          description: p.description,
+          image_url: p.image_url,
+          base_price: p.base_price,
+          currency: p.currency,
+        }));
+
         return {
           content: [
             {
@@ -164,8 +193,8 @@ function createServer() {
             },
           ],
           structuredContent: {
-            brand,
-            products: products || [],
+            brand: cleanBrand,
+            products: cleanProducts,
             brandName: brand.name,
           },
         };
@@ -227,6 +256,30 @@ function createServer() {
           .eq("product_id", args.productId)
           .order("price", { ascending: true });
 
+        // Clean data to prevent circular refs
+        const cleanProduct = {
+          id: product.id,
+          brand_id: product.brand_id,
+          name: product.name,
+          slug: product.slug,
+          description: product.description,
+          long_description: product.long_description,
+          image_url: product.image_url,
+          base_price: product.base_price,
+          currency: product.currency,
+          checkout_url: product.checkout_url,
+        };
+
+        const cleanVariants = (variants || []).map(v => ({
+          id: v.id,
+          name: v.name,
+          sku: v.sku,
+          price: v.price,
+          currency: v.currency,
+          stock_status: v.stock_status,
+          attributes: v.attributes,
+        }));
+
         return {
           content: [
             {
@@ -235,8 +288,8 @@ function createServer() {
             },
           ],
           structuredContent: {
-            product,
-            variants: variants || [],
+            product: cleanProduct,
+            variants: cleanVariants,
             brandName: brand?.name,
           },
         };
