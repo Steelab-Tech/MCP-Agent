@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "tsx watch server/index.ts",
     "bundle:widgets": "bash scripts/bundle-widgets.sh",
-    "build": "npm run bundle:widgets && tsc -p tsconfig.json && echo '✅ Build completed. Files:' && ls -la build/server/",
-    "start": "echo 'Starting from:' && pwd && echo 'Looking for:' && ls -la build/server/ && node build/server/index.js",
+    "build": "tsc -p tsconfig.json && echo '✅ Build completed. Files:' && ls -la build/server/",
+    "build:old": "npm run bundle:widgets && tsc -p tsconfig.json && echo '✅ Build completed. Files:' && ls -la build/server/",
+    "start": "node build/server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
