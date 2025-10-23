@@ -9,11 +9,11 @@ import {
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import {
-  generateBrandListHTML,
-  generateProductListHTML,
-  generateProductDetailHTML,
-  generateLeadFormHTML,
-} from "./widgets";
+  getBrandListTemplate,
+  getProductListTemplate,
+  getProductDetailTemplate,
+  getLeadFormTemplate,
+} from "./widget-templates";
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -70,7 +70,7 @@ function createServer() {
       templateUri: "ui://widget/brand-list.html",
       invoking: "Đang tải danh sách thương hiệu...",
       invoked: "Danh sách thương hiệu đã được tải!",
-      html: generateBrandListHTML([]), // Empty state, will be populated via structuredContent
+      html: getBrandListTemplate(), // Dynamic template
       responseText: "Đây là danh sách các thương hiệu có sẵn.",
     },
     async () => {
@@ -96,9 +96,6 @@ function createServer() {
           website_url: b.website_url,
         }));
 
-        // Generate lightweight HTML (5KB vs 387KB!)
-        const html = generateBrandListHTML(cleanBrands);
-
         return {
           content: [
             {
@@ -106,8 +103,7 @@ function createServer() {
               text: `Tìm thấy ${brands?.length || 0} thương hiệu đang hoạt động.`,
             },
           ],
-          structuredContent: { brands: cleanBrands },
-          html, // Dynamic HTML
+          structuredContent: { brands: cleanBrands }, // Data for widget template
         };
       } catch (error) {
         console.error("Failed to load brands:", error);
@@ -118,8 +114,7 @@ function createServer() {
               text: "Không thể tải danh sách thương hiệu. Vui lòng thử lại sau.",
             },
           ],
-          structuredContent: { brands: [] },
-          html: generateBrandListHTML([]), // Empty state HTML
+          structuredContent: { brands: [] }, // Empty data for template
         };
       }
     }
@@ -137,7 +132,7 @@ function createServer() {
       templateUri: "ui://widget/product-list.html",
       invoking: "Đang tải sản phẩm...",
       invoked: "Danh sách sản phẩm đã được tải!",
-      html: "", // Will be dynamically generated
+      html: getProductListTemplate(), // Dynamic template
       responseText: "Đây là danh sách sản phẩm của thương hiệu đã chọn.",
       inputSchema: selectBrandSchema,
     },
@@ -186,9 +181,6 @@ function createServer() {
           currency: p.currency,
         }));
 
-        // Generate lightweight HTML (5KB vs 389KB!)
-        const html = generateProductListHTML(cleanProducts, cleanBrand);
-
         return {
           content: [
             {
@@ -199,9 +191,7 @@ function createServer() {
           structuredContent: {
             brand: cleanBrand,
             products: cleanProducts,
-            brandName: brand.name,
           },
-          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Error selecting brand:", error);
@@ -230,7 +220,7 @@ function createServer() {
       templateUri: "ui://widget/product-detail.html",
       invoking: "Đang tải chi tiết sản phẩm...",
       invoked: "Chi tiết sản phẩm đã được tải!",
-      html: "", // Will be dynamically generated
+      html: getProductDetailTemplate(), // Dynamic template
       responseText: "Đây là thông tin chi tiết về sản phẩm.",
       inputSchema: selectProductSchema,
     },
@@ -294,9 +284,6 @@ function createServer() {
           attributes: v.attributes,
         }));
 
-        // Generate lightweight HTML (8KB vs 392KB!)
-        const html = generateProductDetailHTML(cleanProduct, cleanVariants, cleanBrand);
-
         return {
           content: [
             {
@@ -309,7 +296,6 @@ function createServer() {
             variants: cleanVariants,
             brandName: brand?.name,
           },
-          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Error selecting product:", error);
@@ -338,7 +324,7 @@ function createServer() {
       templateUri: "ui://widget/lead-form.html",
       invoking: "Đang chuẩn bị form...",
       invoked: "Form đã sẵn sàng!",
-      html: "", // Will be dynamically generated
+      html: getLeadFormTemplate(), // Dynamic template
       responseText: "Vui lòng điền thông tin để nhận tư vấn miễn phí.",
       inputSchema: showLeadFormSchema,
     },
@@ -362,9 +348,6 @@ function createServer() {
           product = productData;
         }
 
-        // Generate lightweight HTML (6KB vs 447KB!)
-        const html = generateLeadFormHTML(product);
-
         return {
           content: [
             {
@@ -379,7 +362,6 @@ function createServer() {
             productName: product?.name,
             variantId: args.variantId,
           },
-          html, // Dynamic HTML
         };
       } catch (error) {
         console.error("Error showing lead form:", error);
@@ -391,7 +373,6 @@ function createServer() {
             },
           ],
           structuredContent: {},
-          html: generateLeadFormHTML(), // Generic form
         };
       }
     }
